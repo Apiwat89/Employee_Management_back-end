@@ -119,12 +119,24 @@ app.post("/check_status_employee", (req, res) => {
 
     if (!id_person) return res.json({error: "Error ID"});
 
-    db.get(`SELECT Status FROM Employee WHERE ID_Person = ?`, [id_person], (err, row) => {
+    db.get(`SELECT Status, Position FROM Employee WHERE ID_Person = ?`, [id_person], (err, row) => {
         if (err) return res.status(500).json({error: err.message});
         if (!row) return res.json({error: "ID_Employee not found"}); // id not found
 
-        if (row.Status === 1) return res.json({success: "active!"}); // status 1 
+        if (row.Status === "1") return res.json({success: "active!", position: row.Position}); // status 1 
         else return res.json({notsuccess: "not active"}); // status 0
+    });
+});
+
+// Update status employee
+app.post("/update_status_employee", (req, res) => {
+    const {id_employee} = req.body;
+
+    if (!id_employee) return res.json({error: "Error ID"});
+
+    db.run(`UPDATE Employee SET Status = 1 WHERE ID_Employee = ?`, [id_employee], (err) => {
+        if (err) return res.status(500).json({error: "Failed to update status."});
+        return res.json({success: "Employee status updated to active!"});
     });
 });
 
