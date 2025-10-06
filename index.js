@@ -170,6 +170,30 @@ app.post("/update_status_employee", (req, res) => {
     });
 });
 
+// Pull Birthday between 14 days
+app.get("/birthday_countdown", (req, res) => {
+    db.all(`
+        SELECT Fullname, Birthday, Position, DayLeft FROM (
+            SELECT FirstnameENG || ' ' || LastnameENG AS Fullname, Birthday, Position,
+                CAST(julianday(
+                    date(
+                        CASE 
+                            WHEN strftime('%m-%d', Birthday) >= strftime('%m-%d','now')
+                            THEN strftime('%Y','now') || '-' || strftime('%m-%d', Birthday)
+                            ELSE strftime('%Y','now','+1 year') || '-' || strftime('%m-%d', Birthday)
+                        END
+                        )
+                    ) - julianday('now') AS INTEGER
+                ) AS DayLeft
+            FROM Employee)
+        WHERE DayLeft BETWEEN 0 AND 14
+        ORDER BY DayLeft ASC;
+    `, [], (err, rows) => {
+        if (err) return res.status(500).json({error: err.message});
+        res.json({success: "Pull upcoming birthdays success", rows: rows});
+    });
+});
+
 /* Benefit */
 // Create benefit
 app.post("/create_benefit", (req, res) => {
@@ -191,6 +215,76 @@ app.get("/top10_salary", (req, res) => {
     `, [], (err, rows) => {
         if (err) return res.status(500).json({error: err.message});
         res.json({success: "Pull the top 10 salary success", rows: rows});
+    });
+});
+
+// Pull the top 10 salary position
+app.get("/top10_Sposition", (req, res) => {
+    db.all(`
+        SELECT e.FirstnameENG || ' ' || e.LastnameENG AS Fullname, e.Position, b.Salary
+            FROM Benefit b 
+            JOIN Employee e ON b.ID_Employee = e.ID_Employee
+            WHERE b.Salary = (
+                SELECT MAX(b2.Salary)
+                    FROM Benefit b2
+                    JOIN Employee e2 ON b2.ID_Employee = e2.ID_Employee
+                    WHERE e2.Position = e.Position
+                )
+            ORDER BY b.Salary DESC LIMIT 10 
+    `, [], (err, rows) => {
+        if (err) return res.status(500).json({error: err.message});
+        res.json({success: "Pull the top 10 salary position success", rows: rows});
+    });
+});
+
+// Pull the top 10 Overtime
+app.get("/top10_OT", (req, res) => {
+    db.all(`
+        SELECT e.FirstnameENG || ' ' || e.LastnameENG AS Fullname, e.Position, b.OT
+            FROM Benefit b 
+            JOIN Employee e ON b.ID_Employee = e.ID_Employee
+            ORDER BY CAST(b.OT AS INTEGER) DESC LIMIT 10 
+    `, [], (err, rows) => {
+        if (err) return res.status(500).json({error: err.message});
+        res.json({success: "Pull the top 10 Overtime success", rows: rows});
+    });
+});
+
+// Pull the top 10 Bonus
+app.get("/top10_Bonus", (req, res) => {
+    db.all(`
+        SELECT e.FirstnameENG || ' ' || e.LastnameENG AS Fullname, e.Position, b.Bonus
+            FROM Benefit b 
+            JOIN Employee e ON b.ID_Employee = e.ID_Employee
+            ORDER BY CAST(b.Bonus AS INTEGER) DESC LIMIT 10 
+    `, [], (err, rows) => {
+        if (err) return res.status(500).json({error: err.message});
+        res.json({success: "Pull the top 10 Bonus success", rows: rows});
+    });
+});
+
+/* Department */
+// Create department
+app.post("/create_department", (req, res) => {
+    db.run(`
+        INSERT INTO Department (ID_Employee, Department) VALUES (?,?)
+        `, ['3', 'Service'], (err) => {
+        if (err) res.status(500).json({error: err.message});
+        else res.json({success: "Department success!"}) // add department success
+    });
+});
+
+// Pull count employee in department
+app.get("/department", (req, res) => {
+    db.all(`
+        SELECT d.ID_Department, d.Department, COUNT(e.ID_Employee) AS EmployeeCount
+            FROM Department d
+            JOIN Employee e ON d.ID_Employee = e.ID_Employee
+            GROUP BY d.Department
+            ORDER BY EmployeeCount DESC
+    `, [], (err, rows) => {
+        if (err) return res.status(500).json({error: err.message});
+        res.json({success: "Department summary success", rows: rows});
     });
 });
 
