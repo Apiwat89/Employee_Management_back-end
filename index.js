@@ -43,6 +43,36 @@ const db = new sqlite3.Database("./Database/DB.sqlite", (err) => {
                 else console.log("Table 'Employee' is ready.");
             }
         );
+
+        db.run(`
+            CREATE TABLE IF NOT EXISTS Benefit (
+                ID_Benefit INTEGER PRIMARY KEY AUTOINCREMENT,
+                ID_Employee INTEGER NOT NULL,
+                Salary TEXT NOT NULL,
+                OT TEXT NOT NULL,
+                Bonus TEXT NOT NULL,
+                Tax TEXT NOT NULL,
+                Benefit TEXT NOT NULL,
+                Date DATETIME DEFAULT CURRENT_TIMESTAMP 
+            )`, 
+            (err) => {
+                if (err) console.error("Error creating table Benefit:", err.message);
+                else console.log("Table 'Benefit' is ready.");
+            }
+        );
+
+        db.run(`
+            CREATE TABLE IF NOT EXISTS Department (
+                ID_Department INTEGER PRIMARY KEY AUTOINCREMENT,
+                ID_Employee INTEGER NOT NULL,
+                Department TEXT NOT NULL,
+                Date DATETIME DEFAULT CURRENT_TIMESTAMP 
+            )`, 
+            (err) => {
+                if (err) console.error("Error creating table Benefit:", err.message);
+                else console.log("Table 'Benefit' is ready.");
+            }
+        );
     }
 });
 
@@ -137,6 +167,30 @@ app.post("/update_status_employee", (req, res) => {
     db.run(`UPDATE Employee SET Status = 1 WHERE ID_Employee = ?`, [id_employee], (err) => {
         if (err) return res.status(500).json({error: "Failed to update status."});
         return res.json({success: "Employee status updated to active!"});
+    });
+});
+
+/* Benefit */
+// Create benefit
+app.post("/create_benefit", (req, res) => {
+    db.run(`
+        INSERT INTO Benefit (ID_Employee, Salary, OT, Bonus, Tax, Benefit) VALUES (?,?,?,?,?,?)
+        `, ['1', '10000', '150', '15000', '520', 'ประกันชีวิตเมื่อเกิดอุบัติเหตุ'], (err) => {
+        if (err) res.status(500).json({error: err.message});
+        else res.json({success: "Benefit success!"}) // add benefit success
+    });
+});
+
+// Pull the top 10 salary 
+app.get("/top10_salary", (req, res) => {
+    db.all(`
+        SELECT e.FirstnameENG || ' ' || e.LastnameENG AS Fullname, b.Salary 
+            FROM Benefit b 
+            JOIN Employee e ON b.ID_Employee = e.ID_Employee
+            ORDER BY CAST(b.Salary AS INTEGER) DESC LIMIT 10 
+    `, [], (err, rows) => {
+        if (err) return res.status(500).json({error: err.message});
+        res.json({success: "Pull the top 10 salary success", rows: rows});
     });
 });
 
